@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>吉安圳-不尽(盡)跌水井打卡點</title>
+    <style>
+    body {
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f0f2f5;
+    padding: 20px;
+}
+
+.camera-box {
+    position: relative;
+    width: 90vw;
+    max-width: 500px;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    border-radius: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    background-color: #000;
+}
+
+video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    z-index: 1;
+}
+
+#filter-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.controls {
+    margin: 20px 0;
+}
+
+button {
+    padding: 12px 25px;
+    font-size: 18px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+}
+
+#photo {
+    width: 90vw;
+    max-width: 500px;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    border: 5px solid white;
+    border-radius: 10px;
+    display: none;
+    margin-top: 20px;
+}
+    </style>
+</head>
+<body>
+
+    <h2>吉安圳-不尽(盡)跌水井打卡點</h2>
+
+    <div class="camera-box">
+        <video id="video" autoplay playsinline muted></video>
+        <img id="filter-overlay" src="1150708_創意構想_AR實景_吉安圳拍照打卡框.png" alt="濾鏡圖層">
+    </div>
+
+<div class="controls">
+    <button id="toggleCamera">🔄 切換前後鏡頭</button>
+    <button id="snap">📸 拍照</button>
+    <button id="savePhoto">💾 照片儲存在下方 需長按儲存</button>
+</div>
+
+    <canvas id="canvas" style="display:none;"></canvas>
+    <img id="photo" alt="拍照結果">
+    <p id="message"></p>
+
+    <script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const snap = document.getElementById('snap');
+const photo = document.getElementById('photo');
+const toggleCamera = document.getElementById('toggleCamera');
+const savePhoto = document.getElementById('savePhoto');
+const message = document.getElementById('message');
+
+let currentStream;
+let useRearCamera = false;
+let latestPhotoData = '';
+
+const filterImg = document.getElementById('filter-overlay');
+
+async function startCamera() {
+    if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+    }
+
+    const mode = useRearCamera ? "environment" : "user";
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: mode
+            },
+            audio: false
+        });
+
+        currentStream = stream;
+        video.srcObject = stream;
+
+        video.onloadedmetadata = () => {
+            video.play();
+        };
+
+    } catch (err) {
+        console.error(err);
+        alert("相機開啟失敗，請確認瀏覽器有允許相機權限");
+    }
+}
+
+toggleCamera.addEventListener('click', () => {
+    useRearCamera = !useRearCamera;
+    startCamera();
+});
+
+snap.addEventListener('click', () => {
+    
+
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+        alert("鏡頭還沒準備好，請等一下再拍");
+        return;
+    }
+
+    if (!filterImg.complete) {
+        alert("相框圖片還沒載入完成，請等一下再拍");
+        return;
+    }
+
+    const context = canvas.getContext('2d');
+
+    canvas.width = 1200;
+    canvas.height = 1600;
+
+    const cw = canvas.width;
+    const ch = canvas.height;
+
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+
+    const canvasRatio = cw / ch;
+    const videoRatio = vw / vh;
+
+    let sx, sy, sw, sh;
+
+    if (videoRatio > canvasRatio) {
+        sh = vh;
+        sw = vh * canvasRatio;
+        sx = (vw - sw) / 2;
+        sy = 0;
+    } else {
+        sw = vw;
+        sh = vw / canvasRatio;
+        sx = 0;
+        sy = (vh - sh) / 2;
+    }
+
+    context.drawImage(video, sx, sy, sw, sh, 0, 0, cw, ch);
+    context.drawImage(filterImg, 0, 0, cw, ch);
+latestPhotoData = canvas.toDataURL('image/png');
+
+photo.src = latestPhotoData;
+photo.style.display = 'block';
+
+message.textContent = "拍照完成，照片已產生在下方";
+
+// 讓鏡頭繼續播放
+video.play();
+photo.style.display = 'block';
+
+});
+
+savePhoto.addEventListener('click', () => {
+    if (!latestPhotoData) {
+        alert("請先拍照");
+        return;
+    }
+
+    const link = document.createElement('a');
+    link.href = latestPhotoData;
+    link.download = '吉安圳拍照打卡框.png';
+    link.click();
+
+    message.textContent = "照片已下載，如果手機沒有存到相簿，請長按下方照片儲存。";
+
+    // 儲存後也讓鏡頭繼續播放
+    video.play();
+});
+
+startCamera();
+</script>
+</body>
+</html>
